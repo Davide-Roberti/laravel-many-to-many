@@ -22,7 +22,9 @@ class PageController extends Controller
      */
     public function index()
     {
-        //
+        $pages = Page::paginate();
+
+        return view('admin.pages.index', compact('pages'));
     }
 
     /**
@@ -74,7 +76,9 @@ class PageController extends Controller
      */
     public function show($id)
     {
-        //
+        $page = Page::findOrFail($id);
+
+        return view('admin.pages.show', compact('page'));
     }
 
     /**
@@ -85,7 +89,12 @@ class PageController extends Controller
      */
     public function edit($id)
     {
-        //
+        $page = Page::findOrFail($id);
+        $categories = Category::all();
+        $tags = Tag::all();
+        $photos = Photo::all();
+
+        return view('admin.pages.edit', compact('page','categories', 'tags', 'photos'));
     }
 
     /**
@@ -97,7 +106,33 @@ class PageController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $page = Page::findOrFail($id);
+        $data = $request->all();
+        $userId = Auth::id();
+        $author =$page->user_id;
+
+        if($userId != $author) {
+            abort('404');
+        }
+
+        //validation
+
+        $page->fill($data);
+        $updated = $page->update();
+        if (!$updated) {
+           return redirect()->back();
+        }
+
+        //manualmente elimino tutti i collegamenti nella tabella ponte
+        //$page->tags()->detach();
+        //ricreo i record in tabella ponte
+        //$page->tags()->attach($data['tags']);
+
+        //sincronizza tabella ponte
+        $page->tags()->sync($data['tags']);
+        $page->photos()->sync($data['photos']);
+
+        return redirect()->route('admin.pages.show', $page->id);
     }
 
     /**
@@ -108,6 +143,16 @@ class PageController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $page = Page::findOrFail($id);
+
+        $page->tags()->detach();
+        $page->photos()->detach();
+        $deleted = $page->delete();
+
+        if(!$deleted){
+            return redirect()->back();
+        }
+
+        return redirect()->route('admin.pages.index');
     }
 }

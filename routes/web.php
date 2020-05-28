@@ -17,8 +17,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/home', 'HomeController@index')->name('home');
-
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
+
+Route::prefix('admin')
+->name('admin.')
+->namespace('Admin')
+->middleware('auth') 
+->group(function () {
+    Route::resource('pages', 'PageController');
+
+});
